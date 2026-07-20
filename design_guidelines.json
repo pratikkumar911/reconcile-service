@@ -1,0 +1,95 @@
+{
+  "app_name": "Order-Payment Reconciliation Dashboard",
+  "theme_strategy": "light",
+  "design_philosophy": "Clarity over polish. Neutral palette with semantic color coding. Desktop-first data density.",
+  "typography": {
+    "headings": {
+      "fontFamily": "Manrope, sans-serif",
+      "weights": ["600", "800"],
+      "instructions": "Use for KPI numbers, page titles, and card headers. Ensure tracking-tight for sizes text-2xl and above. DO NOT use generic Inter for headings."
+    },
+    "body": {
+      "fontFamily": "IBM Plex Sans, sans-serif",
+      "weights": ["400", "500", "600"],
+      "instructions": "Use for table data, LLM explanations, and forms. Optimal for high-density numerical readability. Apply tabular-nums utility for money columns."
+    },
+    "scale": {
+      "h1": "text-3xl font-extrabold tracking-tight text-slate-900",
+      "h2": "text-2xl font-bold tracking-tight text-slate-900",
+      "h3": "text-xl font-semibold text-slate-800",
+      "kpi_value": "text-4xl font-black tracking-tighter text-slate-900",
+      "body": "text-sm text-slate-600",
+      "labels": "text-xs font-bold uppercase tracking-[0.1em] text-slate-500"
+    }
+  },
+  "colors": {
+    "background": "bg-slate-50",
+    "surface": "bg-white",
+    "primary_cta": "bg-slate-900 text-white hover:bg-slate-800 focus:ring-2 focus:ring-slate-400 focus:ring-offset-2",
+    "border": "border-slate-200",
+    "text": {
+      "primary": "text-slate-900",
+      "secondary": "text-slate-600",
+      "muted": "text-slate-400"
+    },
+    "badges_and_severity": {
+      "red": {
+        "classes": "bg-red-50 text-red-700 border border-red-200",
+        "usage": ["MISSING_PAYMENT", "STATUS_CONFLICT", "DUPLICATE_PAYMENT", "CANCELLED_BUT_PAID"]
+      },
+      "amber": {
+        "classes": "bg-amber-50 text-amber-700 border border-amber-200",
+        "usage": ["AMOUNT_MISMATCH", "CURRENCY_MISMATCH", "ORPHAN_PAYMENT", "REFUND_MISMATCH"]
+      },
+      "green": {
+        "classes": "bg-emerald-50 text-emerald-700 border border-emerald-200",
+        "usage": ["MATCHED"]
+      }
+    },
+    "instructions": "Adhere strictly to the neutral palette. Bright colors are strictly reserved for severity indicators (Red/Amber/Green) to draw attention to discrepancies."
+  },
+  "layouts": {
+    "page_structure": "Sidebar or Topbar navigation + Main Content Area. Maximize horizontal space for tables.",
+    "kpi_dashboard": {
+      "grid": "grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4",
+      "style": "High-density widgets. Flat surface, 1px border. Do not use heavy shadows."
+    },
+    "data_tables": {
+      "wrapper": "w-full overflow-x-auto bg-white border border-slate-200 rounded-lg",
+      "cells": "px-4 py-3 text-sm text-left align-middle",
+      "money_cells": "text-right font-medium tabular-nums"
+    },
+    "side_panel": {
+      "width": "w-full sm:w-[400px] md:w-[500px]",
+      "behavior": "Slide in from right (Shadcn Sheet). Contains LLM explanations.",
+      "overlay": "bg-slate-900/20 backdrop-blur-sm (No fully transparent overlays)"
+    }
+  },
+  "components": {
+    "buttons": "One primary CTA per screen (Solid slate-900). Secondary actions use ghost or outline styles. Add data-testid to all buttons.",
+    "cards": "bg-white border border-slate-200 rounded-md shadow-sm. No glassmorphism.",
+    "tables": "Shadcn UI table. Must have sticky header. Row hover state: hover:bg-slate-50.",
+    "charts": "Recharts. Use Bar Chart for 'Discrepancies by Type' and Donut for 'Reconciliation Status'. Map chart colors strictly to the severity badge palette (Red, Amber, Green).",
+    "file_upload": "Dashed border dropzone (border-2 border-dashed border-slate-300). Must display progress bars during ingestion.",
+    "llm_explanation_panel": "Render plain English explanations in a typography prose container. Use skeleton loaders while generating."
+  },
+  "interactions_and_motion": {
+    "hover": "Subtle translate-y-[-1px] and shadow-md upgrade on interactive cards.",
+    "transitions": "transition-all duration-200 ease-in-out for buttons. Exclude transforms from universal transitions.",
+    "loading_states": "Use pulse skeleton for data fetches, explicit progress bars for CSV uploads."
+  },
+  "accessibility": {
+    "contrast": "Ensure minimum 4.5:1 ratio. Gray text must be slate-600 or darker.",
+    "focus": "Use explicit focus rings for all interactive elements.",
+    "testing_attributes": "CRITICAL: All interactive elements, inputs, buttons, and significant table rows MUST have 'data-testid' attributes (e.g., data-testid='upload-orders-btn', data-testid='discrepancy-row-1')."
+  },
+  "universal_guidelines": [
+    "Avoid the 'AI slop' aesthetic: never use generic centered layouts, simplistic gradients, or uniform styling.",
+    "Do not use emojis for icons. Use Phosphor Icons or Lucide React.",
+    "Create new components in .js format matching the Shadcn standard.",
+    "Do not use fully transparent backgrounds anywhere content scrolls under (headers, dropdowns, panels).",
+    "Use 'sonner' for toast notifications.",
+    "Maintain high data density; avoid excessive whitespace within data tables."
+  ],
+  "instructions_to_main_agent": "Use this JSON file as the source of truth for all styling, component selection, and layout decisions. Ensure the Recharts implementation uses the custom semantic colors defined here. Emphasize standard HTML inputs wrapped in Shadcn forms. Remember to strictly write .js files (with JSX), not .tsx."
+}
