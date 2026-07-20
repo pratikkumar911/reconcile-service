@@ -31,17 +31,12 @@ import { DISCREPANCY_TYPES, SEVERITY, SEVERITY_CLASSES, TYPE_LABEL, fmtUsd } fro
 export default function DiscrepancyTable({ rows, loading, onExplain }) {
   const [typeFilter, setTypeFilter] = useState(new Set()); // empty = all
   const [currency, setCurrency] = useState("all");
-  const [minAmt, setMinAmt] = useState("");
-  const [maxAmt, setMaxAmt] = useState("");
   const [q, setQ] = useState("");
 
   const filtered = useMemo(() => {
     return (rows || []).filter((d) => {
       if (typeFilter.size > 0 && !typeFilter.has(d.type)) return false;
       if (currency !== "all" && (d.currency || "").toUpperCase() !== currency) return false;
-      const risk = d.money_at_risk_usd || 0;
-      if (minAmt !== "" && risk < parseFloat(minAmt)) return false;
-      if (maxAmt !== "" && risk > parseFloat(maxAmt)) return false;
       if (q) {
         const s = q.toLowerCase();
         if (
@@ -52,7 +47,7 @@ export default function DiscrepancyTable({ rows, loading, onExplain }) {
       }
       return true;
     });
-  }, [rows, typeFilter, currency, minAmt, maxAmt, q]);
+  }, [rows, typeFilter, currency, q]);
 
   const toggleType = (t) => {
     const next = new Set(typeFilter);
@@ -64,8 +59,6 @@ export default function DiscrepancyTable({ rows, loading, onExplain }) {
   const clearFilters = () => {
     setTypeFilter(new Set());
     setCurrency("all");
-    setMinAmt("");
-    setMaxAmt("");
     setQ("");
   };
 
@@ -142,27 +135,7 @@ export default function DiscrepancyTable({ rows, loading, onExplain }) {
           </SelectContent>
         </Select>
 
-        <div className="flex items-center gap-1">
-          <Input
-            data-testid="min-amount"
-            placeholder="Min $"
-            value={minAmt}
-            onChange={(e) => setMinAmt(e.target.value)}
-            className="w-24"
-            inputMode="decimal"
-          />
-          <span className="text-slate-400">–</span>
-          <Input
-            data-testid="max-amount"
-            placeholder="Max $"
-            value={maxAmt}
-            onChange={(e) => setMaxAmt(e.target.value)}
-            className="w-24"
-            inputMode="decimal"
-          />
-        </div>
-
-        {(typeFilter.size > 0 || currency !== "all" || minAmt || maxAmt || q) && (
+        {(typeFilter.size > 0 || currency !== "all" || q) && (
           <Button
             variant="ghost"
             size="sm"
