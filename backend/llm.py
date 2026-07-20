@@ -1,4 +1,4 @@
-"""LLM explanations for discrepancies (OpenAI gpt-5.2-mini via Emergent Universal Key)."""
+"""LLM explanations for discrepancies (OpenAI gpt-4.1-mini via Emergent Universal Key)."""
 import os
 import json
 import asyncio
