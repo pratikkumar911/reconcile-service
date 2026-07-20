@@ -1,5 +1,5 @@
-import { fmtNum, fmtUsd } from "@/lib/constants";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { fmtNum, fmtUsd } from "../lib/constants";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 import { Info } from "lucide-react";
 
 function Card({ label, value, sub, testid, accent }) {

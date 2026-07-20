@@ -19,7 +19,7 @@
 ##   - task: "Task name"
 ##     implemented: true
 ##     working: true  # or false or "NA"
-##     file: "file_path.py"
+##     file: "file_path.js"
 ##     stuck_count: 0
 ##     priority: "high"  # or "medium" or "low"
 ##     needs_retesting: false

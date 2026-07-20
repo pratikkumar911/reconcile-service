@@ -1,5 +1,5 @@
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, Cell, CartesianGrid } from "recharts";
-import { SEVERITY, SEVERITY_HEX, TYPE_LABEL } from "@/lib/constants";
+import { SEVERITY, SEVERITY_HEX, TYPE_LABEL } from "../lib/constants";
 
 export default function DiscrepancyChart({ kpis }) {
   if (!kpis) return null;

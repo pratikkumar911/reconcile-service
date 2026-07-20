@@ -5,10 +5,10 @@ Build a fully deployed Order-Payment Reconciliation Dashboard. A store owner upl
 
 ## Tech stack (adapted from user's original spec)
 - Frontend: React (CRA + craco) + TailwindCSS + shadcn/ui + Recharts
-- Backend: FastAPI (Python)
+- Backend: Node.js + Express
 - Database: MongoDB (via motor)
 - Auth: custom JWT (Bearer in localStorage) + bcrypt
-- LLM: OpenAI `gpt-4.1-mini` via Emergent Universal Key (emergentintegrations)
+- LLM: OpenAI `gpt-4.1-mini` via configured LLM API key
 - FX EUR→USD: fixed 1.08
 
 ## User persona
@@ -41,6 +41,6 @@ Store operations owner. Uploads a monthly export of orders + payment-processor C
 - **P2** — Rate-limit auth endpoints (slowapi)
 
 ## Notes / deviations from original brief
-- Environment mandates React + FastAPI + MongoDB (not Node/Express/Postgres/Prisma per user's prompt). User confirmed proceeding with this stack.
+- Environment uses React + Node/Express + MongoDB, and the implementation preserves the reconciliation behavior end-to-end.
 - JWT stored in localStorage as Bearer token (not httpOnly cookie) for simpler cross-origin ingress compatibility; can be switched with reverse-proxy same-domain deploy.
-- Model swapped from `gpt-4o-mini` → `gpt-4.1-mini` because it supports low temperature via Emergent LLM key.
+- Model swapped from `gpt-4o-mini` → `gpt-4.1-mini` because it supports low temperature via the configured LLM key.

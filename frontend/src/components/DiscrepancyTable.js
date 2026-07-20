@@ -6,10 +6,10 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+} from "./ui/table";
+import { Input } from "./ui/input";
+import { Button } from "./ui/button";
+import { Badge } from "./ui/badge";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -17,16 +17,16 @@ import {
   DropdownMenuCheckboxItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu";
+} from "./ui/dropdown-menu";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from "./ui/select";
 import { Sparkles, Filter, Search, ChevronDown } from "lucide-react";
-import { DISCREPANCY_TYPES, SEVERITY, SEVERITY_CLASSES, TYPE_LABEL, fmtUsd } from "@/lib/constants";
+import { DISCREPANCY_TYPES, SEVERITY, SEVERITY_CLASSES, TYPE_LABEL, fmtUsd } from "../lib/constants";
 
 export default function DiscrepancyTable({ rows, loading, onExplain }) {
   const [typeFilter, setTypeFilter] = useState(new Set()); // empty = all

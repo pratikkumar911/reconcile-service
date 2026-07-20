@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { toast } from "sonner";
-import { api } from "@/lib/api";
-import { Button } from "@/components/ui/button";
+import { api } from "../lib/api";
+import { Button } from "./ui/button";
 import { UploadCloud, FileText, Loader2 } from "lucide-react";
 
 function Dropzone({ label, testid, file, setFile }) {

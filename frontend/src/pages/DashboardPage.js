@@ -1,17 +1,16 @@
 import { useEffect, useState, useCallback } from "react";
-import { useParams, Link } from "react-router-dom";
-import { api } from "@/lib/api";
-import UploadPanel from "@/components/UploadPanel";
-import KpiCards from "@/components/KpiCards";
-import DiscrepancyChart from "@/components/DiscrepancyChart";
-import DiscrepancyTable from "@/components/DiscrepancyTable";
-import ExplainSheet from "@/components/ExplainSheet";
-import { Skeleton } from "@/components/ui/skeleton";
+import { useParams } from "react-router-dom";
+import { api } from "../lib/api";
+import UploadPanel from "../components/UploadPanel";
+import KpiCards from "../components/KpiCards";
+import DiscrepancyChart from "../components/DiscrepancyChart";
+import DiscrepancyTable from "../components/DiscrepancyTable";
+import ExplainSheet from "../components/ExplainSheet";
+import { Skeleton } from "../components/ui/skeleton";
 import { toast } from "sonner";
 
 export default function DashboardPage() {
   const { runId: routeRunId } = useParams();
-  const [runs, setRuns] = useState([]);
   const [currentRun, setCurrentRun] = useState(null);
   const [kpis, setKpis] = useState(null);
   const [rows, setRows] = useState([]);
@@ -20,13 +19,15 @@ export default function DashboardPage() {
   const [selected, setSelected] = useState(null);
   const [bootstrapping, setBootstrapping] = useState(true);
 
-  const loadRuns = useCallback(async () => {
-    const { data } = await api.get("/runs");
-    setRuns(data);
-    return data;
-  }, []);
-
   const loadRun = useCallback(async (runId) => {
+    if (!runId) {
+      setCurrentRun(null);
+      setKpis(null);
+      setRows([]);
+      setLoadingRows(false);
+      return;
+    }
+
     setLoadingRows(true);
     try {
       const [kpiRes, discRes, runRes] = await Promise.all([
@@ -46,16 +47,19 @@ export default function DashboardPage() {
 
   useEffect(() => {
     (async () => {
-      const list = await loadRuns();
-      const target = routeRunId || list?.[0]?.id;
-      if (target) await loadRun(target);
+      if (routeRunId) {
+        await loadRun(routeRunId);
+      } else {
+        setCurrentRun(null);
+        setKpis(null);
+        setRows([]);
+      }
       setBootstrapping(false);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [routeRunId]);
 
   const onCreated = async (run) => {
-    await loadRuns();
     await loadRun(run.id);
   };
 
@@ -102,15 +106,6 @@ export default function DashboardPage() {
             </p>
           )}
         </div>
-        {runs.length > 0 && (
-          <Link
-            to="/runs"
-            data-testid="see-history-link"
-            className="text-sm font-semibold text-slate-900 underline underline-offset-4 hover:text-slate-700"
-          >
-            View history ({runs.length} runs)
-          </Link>
-        )}
       </div>
 
       <UploadPanel onCreated={onCreated} />

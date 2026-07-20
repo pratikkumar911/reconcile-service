@@ -4,7 +4,7 @@
 //
 // Structure: each feature lives in its own file (auth.js, cart.js, ...) and
 // is re-exported from here, so consumers can do a single import like
-// `import { LOGIN, CART } from '@/constants/testIds'` (or relative).
+// `import { LOGIN, CART } from './'` (or relative).
 //
 // Adding a new feature:
 //   1. Create constants/testIds/<feature>.js

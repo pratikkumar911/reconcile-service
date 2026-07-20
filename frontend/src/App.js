@@ -1,10 +1,9 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "sonner";
-import { AuthProvider, useAuth } from "@/lib/auth";
-import AuthPage from "@/pages/AuthPage";
-import DashboardPage from "@/pages/DashboardPage";
-import RunsPage from "@/pages/RunsPage";
-import AppShell from "@/components/AppShell";
+import { AuthProvider, useAuth } from "./lib/auth";
+import AuthPage from "./pages/AuthPage";
+import DashboardPage from "./pages/DashboardPage";
+import AppShell from "./components/AppShell";
 
 function Protected({ children }) {
   const { user, ready } = useAuth();
@@ -40,26 +39,6 @@ export default function App() {
               <Protected>
                 <AppShell>
                   <DashboardPage />
-                </AppShell>
-              </Protected>
-            }
-          />
-          <Route
-            path="/runs/:runId"
-            element={
-              <Protected>
-                <AppShell>
-                  <DashboardPage />
-                </AppShell>
-              </Protected>
-            }
-          />
-          <Route
-            path="/runs"
-            element={
-              <Protected>
-                <AppShell>
-                  <RunsPage />
                 </AppShell>
               </Protected>
             }

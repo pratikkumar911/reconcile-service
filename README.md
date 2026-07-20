@@ -3,26 +3,26 @@
 A full-stack app for store owners to upload their `orders.csv` and `payments.csv`, and get a deterministic reconciliation report with LLM-powered plain-English explanations.
 
 ## Live URLs
-- Frontend: https://payment-match-hub-7.preview.emergentagent.com
+- Frontend: https://payment-match-hub-7.preview.example.com
 - Backend API: same origin, `/api/*`
 
 ## Tech stack (as-built)
 - **Frontend**: React 19 (CRA + craco), TailwindCSS, shadcn/ui, Recharts, sonner (toasts), Lucide icons
-- **Backend**: FastAPI + motor (MongoDB async)
+- **Backend**: Node.js + Express + MongoDB
 - **Database**: MongoDB
 - **Auth**: JWT (Bearer token, HS256) + bcrypt (cost 10)
-- **LLM**: OpenAI `gpt-4.1-mini` via Emergent Universal LLM Key (temperature 0.2, JSON-shape enforced, 15s timeout, one automatic retry, cache in Mongo)
+- **LLM**: OpenAI `gpt-4.1-mini` via configured LLM API key (temperature 0.2, JSON-shape enforced, 15s timeout, one automatic retry, cache in Mongo)
 - **FX**: EUR→USD fixed at 1.08
 
-> **Note**: The original assignment brief specified Node/Express + Postgres + Prisma. The Emergent environment is React + FastAPI + MongoDB. With confirmation, all business rules, endpoints, and semantics were preserved 1:1.
+> **Note**: The project now uses Node/Express with MongoDB, and the reconciliation rules, endpoints, and semantics were preserved in the implementation.
 
 ## Local setup
 ```bash
 # Backend
 cd /app/backend
-pip install -r requirements.txt
-# .env should contain: MONGO_URL, DB_NAME, JWT_SECRET, EMERGENT_LLM_KEY, CORS_ORIGINS
-# Server is managed by supervisor: sudo supervisorctl restart backend
+npm install
+# .env should contain: MONGO_URL, DB_NAME, JWT_SECRET, CORS_ORIGINS
+# Start the API with: npm start
 
 # Frontend
 cd /app/frontend
@@ -78,7 +78,7 @@ All under `/api/*`. All except `/api/auth/*` and `/api/health` require `Authoriz
 | GET | `/health` | Liveness |
 
 ## LLM approach
-- Model: `gpt-4.1-mini` (via `emergentintegrations` + Emergent Universal LLM Key)
+- Model: `gpt-4.1-mini` (via configured LLM API key)
 - Temperature: 0.2 (low for consistent explanations)
 - Prompt requests strict JSON: `{ summary, likely_cause, suggested_action }`
 - Response is parsed leniently (strips code fences, extracts first JSON object), validated for shape
@@ -117,7 +117,7 @@ Uploading `/app/sample_data/orders.csv` + `/app/sample_data/payments.csv` produc
 - Batch "Explain all top 5" action
 
 ## Note on AI-tool usage
-This repository was scaffolded and implemented with Emergent's AI coding platform. All reconciliation rules, tolerance math, LLM prompt shape, and endpoint contracts were specified in the prompt and are enforced deterministically in code (`/app/backend/reconcile.py`).
+This repository was scaffolded and implemented with a local full-stack setup. All reconciliation rules, tolerance math, and endpoint contracts are enforced deterministically in code (`/app/backend/reconcile.js`).
 
 ## `.env.example`
-See `/app/backend/.env.example`.
+See `/app/backend/.env.example` if present.

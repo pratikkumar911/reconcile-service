@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { api } from "@/lib/api";
-import { Skeleton } from "@/components/ui/skeleton";
-import { fmtUsd, fmtNum } from "@/lib/constants";
+import { api } from "../lib/api";
+import { Skeleton } from "../components/ui/skeleton";
+import { fmtUsd, fmtNum } from "../lib/constants";
 import { ArrowRight, FileText } from "lucide-react";
 
 export default function RunsPage() {

@@ -1,16 +1,16 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { api } from "@/lib/api";
+import { api } from "../lib/api";
 import {
   Sheet,
   SheetContent,
   SheetHeader,
   SheetTitle,
   SheetDescription,
-} from "@/components/ui/sheet";
-import { Button } from "@/components/ui/button";
+} from "./ui/sheet";
+import { Button } from "./ui/button";
 import { Sparkles, RotateCw, AlertCircle } from "lucide-react";
-import { SEVERITY, SEVERITY_CLASSES, TYPE_LABEL, fmtUsd } from "@/lib/constants";
+import { SEVERITY, SEVERITY_CLASSES, TYPE_LABEL, fmtUsd } from "../lib/constants";
 
 export default function ExplainSheet({ open, onOpenChange, discrepancy, onUpdated }) {
   const [loading, setLoading] = useState(false);
