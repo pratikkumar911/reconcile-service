@@ -249,3 +249,96 @@ def test_data_isolation(user_a, user_b, run_for_user_a):
     # User B tries to fetch user A's run
     r = requests.get(f"{API}/runs/{run_for_user_a['id']}", headers=_auth(user_b["token"]))
     assert r.status_code == 404
+
+
+
+# ---------- Real user CSV (header aliasing + status normalization) ----------
+USER_ORDERS = "/app/user_samples/orders.csv"
+USER_PAYMENTS = "/app/user_samples/payments.csv"
+
+
+@pytest.fixture(scope="module")
+def user_c():
+    email = _rand_email("c")
+    r = requests.post(f"{API}/auth/signup", json={"email": email, "password": "testpass123"})
+    assert r.status_code == 200, r.text
+    d = r.json()
+    return {"email": email, "password": "testpass123", "token": d["token"], "id": d["user"]["id"]}
+
+
+@pytest.fixture(scope="module")
+def run_for_user_c(user_c):
+    """Upload the user's real processor-flavored CSV files (BUG FIX)."""
+    with open(USER_ORDERS, "rb") as of, open(USER_PAYMENTS, "rb") as pf:
+        files = {
+            "orders_file": ("orders.csv", of, "text/csv"),
+            "payments_file": ("payments.csv", pf, "text/csv"),
+        }
+        r = requests.post(f"{API}/runs", files=files, headers=_auth(user_c["token"]))
+    assert r.status_code == 200, f"Bug fix failed: {r.status_code} {r.text}"
+    return r.json()
+
+
+def test_user_real_csv_upload_no_header_error(run_for_user_c):
+    """BUG FIX: real processor CSVs (transaction_ref/processed_at/order_reference/amount/type)
+    should upload cleanly with 200 and correct counts."""
+    d = run_for_user_c
+    assert d["orders_count"] == 185, f"expected 185 orders, got {d['orders_count']}"
+    assert d["payments_count"] == 187, f"expected 187 payments, got {d['payments_count']}"
+
+
+def test_user_real_csv_status_normalization_matched(user_c, run_for_user_c):
+    """Status vocab: settled → succeeded → matched count is non-zero (~167)."""
+    rid = run_for_user_c["id"]
+    h = _auth(user_c["token"])
+    r = requests.get(
+        f"{API}/runs/{rid}/discrepancies?types=MATCHED&include_matched=true", headers=h
+    )
+    assert r.status_code == 200, r.text
+    rows = r.json()
+    matched_rows = [row for row in rows if row["type"] == "MATCHED"]
+    assert len(matched_rows) > 100, (
+        f"expected ~167 MATCHED rows (status=settled treated as succeeded), got {len(matched_rows)}"
+    )
+
+
+def test_user_real_csv_refund_mismatch(run_for_user_c):
+    """Refund handling: type=refund + status=settled → refunded with NEGATIVE amount →
+    REFUND_MISMATCH triggered against refunded orders (1 expected)."""
+    counts = run_for_user_c["discrepancy_counts"]
+    assert counts.get("REFUND_MISMATCH", 0) >= 1, (
+        f"expected REFUND_MISMATCH>=1, got counts={counts}"
+    )
+
+
+# ---------- Regression: original sample data still works ----------
+def test_regression_sample_data_still_works(run_for_user_a):
+    d = run_for_user_a
+    assert d["orders_count"] == 10
+    assert d["payments_count"] == 9
+    assert abs(d["total_money_at_risk_usd"] - 865.10) < 0.5
+    counts = d["discrepancy_counts"]
+    for t in [
+        "MISSING_PAYMENT", "AMOUNT_MISMATCH", "CURRENCY_MISMATCH",
+        "DUPLICATE_PAYMENT", "ORPHAN_PAYMENT", "CANCELLED_BUT_PAID",
+        "REFUND_MISMATCH", "STATUS_CONFLICT", "MATCHED",
+    ]:
+        assert t in counts, f"missing discrepancy type: {t}"
+
+
+# ---------- Missing canonical headers still return 400 ----------
+def test_upload_totally_missing_canonical_headers(user_a):
+    """If orders.csv has literally 'foo,bar' → 400 mentioning canonical header names."""
+    h = _auth(user_a["token"])
+    bad_orders = b"foo,bar\n1,2\n"
+    files = {
+        "orders_file": ("orders.csv", bad_orders, "text/csv"),
+        "payments_file": ("payments.csv", open(SAMPLE_PAYMENTS, "rb"), "text/csv"),
+    }
+    r = requests.post(f"{API}/runs", files=files, headers=h)
+    assert r.status_code == 400
+    body = r.text.lower()
+    assert "missing headers" in body
+    # canonical names should be listed
+    assert "order_id" in body
+    assert "net_amount" in body or "gross_amount" in body

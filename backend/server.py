@@ -121,12 +121,97 @@ def _parse_date(v) -> Optional[str]:
     if not v:
         return None
     s = str(v).strip()
-    for fmt in ("%Y-%m-%d", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M:%S", "%m/%d/%Y", "%d/%m/%Y"):
+    for fmt in (
+        "%Y-%m-%d",
+        "%Y-%m-%dT%H:%M:%S",
+        "%Y-%m-%d %H:%M:%S",
+        "%Y-%m-%d %H:%M",
+        "%m/%d/%Y",
+        "%m/%d/%Y %H:%M",
+        "%d/%m/%Y",
+        "%d/%m/%Y %H:%M",
+        "%d-%m-%Y",
+    ):
         try:
             return datetime.strptime(s, fmt).replace(tzinfo=timezone.utc).isoformat()
         except ValueError:
             continue
     return s  # keep raw if unparseable
+
+
+# Header aliases — accept common variations seen in real payment-processor exports.
+ORDERS_ALIASES = {
+    "order_id": ["order_id", "order_reference", "orderid", "order id", "id"],
+    "customer_email": ["customer_email", "email", "customer", "buyer_email"],
+    "order_date": ["order_date", "created_at", "date", "placed_at"],
+    "gross_amount": ["gross_amount", "gross", "subtotal", "amount"],
+    "discount": ["discount", "discount_amount"],
+    "net_amount": ["net_amount", "net", "total", "grand_total"],
+    "currency": ["currency", "curr"],
+    "status": ["status", "order_status", "state"],
+}
+PAYMENTS_ALIASES = {
+    "payment_id": ["payment_id", "transaction_ref", "transaction_id", "txn_id", "reference"],
+    "order_id": ["order_id", "order_reference", "order_ref"],
+    "paid_amount": ["paid_amount", "amount", "amount_paid", "gross_amount", "captured_amount"],
+    "currency": ["currency", "curr"],
+    "payment_date": ["payment_date", "processed_at", "created_at", "date", "captured_at"],
+    "method": ["method", "type", "payment_method", "channel"],
+    "status": ["status", "payment_status", "state"],
+}
+
+
+def _resolve_aliases(row: dict, alias_map: dict) -> dict:
+    """Return a dict with canonical keys, resolved from the row via alias_map."""
+    lower_row = {(k or "").strip().lower(): v for k, v in row.items()}
+    out = {}
+    for canonical, options in alias_map.items():
+        for opt in options:
+            if opt.lower() in lower_row and lower_row[opt.lower()] not in (None, ""):
+                out[canonical] = lower_row[opt.lower()]
+                break
+    return out
+
+
+def _missing_canonical_headers(headers: set, alias_map: dict, required: set) -> List[str]:
+    """Return canonical header names for which no alias is present in headers."""
+    headers_lower = {(h or "").strip().lower() for h in headers}
+    missing = []
+    for canonical in required:
+        options = alias_map.get(canonical, [canonical])
+        if not any(opt.lower() in headers_lower for opt in options):
+            missing.append(canonical)
+    return sorted(missing)
+
+
+# Status value normalization to our canonical vocabulary.
+STATUS_SUCCESS_ALIASES = {"succeeded", "success", "successful", "settled", "captured", "paid", "completed", "complete"}
+STATUS_FAILED_ALIASES = {"failed", "fail", "declined", "error"}
+STATUS_PENDING_ALIASES = {"pending", "processing", "authorizing", "requires_action"}
+STATUS_REFUNDED_ALIASES = {"refunded", "refund", "reversed", "chargeback"}
+
+
+def _normalize_payment_status(status: str, method: str, amount: float) -> (str, float):
+    """Return (canonical_status, signed_amount).
+
+    Rules: if method/type indicates refund → status="refunded" and amount negated (unless already negative).
+    Otherwise map raw status to our vocabulary (succeeded/failed/pending/refunded).
+    """
+    s = (status or "").strip().lower()
+    m = (method or "").strip().lower()
+    signed = amount
+
+    if m in {"refund", "refunded", "reversal"} and s in STATUS_SUCCESS_ALIASES | STATUS_REFUNDED_ALIASES:
+        return "refunded", -abs(amount)
+    if s in STATUS_REFUNDED_ALIASES:
+        return "refunded", -abs(amount) if signed > 0 else signed
+    if s in STATUS_SUCCESS_ALIASES:
+        return "succeeded", signed
+    if s in STATUS_FAILED_ALIASES:
+        return "failed", signed
+    if s in STATUS_PENDING_ALIASES:
+        return "pending", signed
+    return s or "unknown", signed
 
 
 def _read_csv_rows(content: bytes) -> List[dict]:
@@ -139,6 +224,7 @@ def _normalize_orders(rows: List[dict]) -> (List[dict], List[str]):
     out: List[dict] = []
     skipped: List[str] = []
     for i, r in enumerate(rows, start=2):  # +2 for header row
+        r = _resolve_aliases(r, ORDERS_ALIASES)
         oid = (r.get("order_id") or "").strip()
         if not oid:
             skipped.append(f"orders row {i}: missing order_id")
@@ -155,6 +241,13 @@ def _normalize_orders(rows: List[dict]) -> (List[dict], List[str]):
         email = (r.get("customer_email") or "").strip().lower() or None
         currency = (r.get("currency") or "USD").strip().upper()
         status = (r.get("status") or "").strip().lower()
+        # Normalize order status
+        if status in STATUS_SUCCESS_ALIASES:
+            status = "completed"
+        elif status in {"cancelled", "canceled", "void", "voided"}:
+            status = "cancelled"
+        elif status in STATUS_REFUNDED_ALIASES:
+            status = "refunded"
         out.append({
             "order_id": oid,
             "customer_email": email,
@@ -172,6 +265,7 @@ def _normalize_payments(rows: List[dict]) -> (List[dict], List[str]):
     out: List[dict] = []
     skipped: List[str] = []
     for i, r in enumerate(rows, start=2):
+        r = _resolve_aliases(r, PAYMENTS_ALIASES)
         pid = (r.get("payment_id") or "").strip()
         oid = (r.get("order_id") or "").strip()
         if not pid:
@@ -181,14 +275,17 @@ def _normalize_payments(rows: List[dict]) -> (List[dict], List[str]):
         if amt is None:
             skipped.append(f"payments row {i}: missing paid_amount")
             continue
+        raw_method = (r.get("method") or "").strip().lower() or None
+        raw_status = (r.get("status") or "").strip().lower()
+        canonical_status, signed_amount = _normalize_payment_status(raw_status, raw_method or "", amt)
         out.append({
             "payment_id": pid,
             "order_id": oid or None,
-            "paid_amount": round(amt, 2),
+            "paid_amount": round(signed_amount, 2),
             "currency": (r.get("currency") or "USD").strip().upper(),
             "payment_date": _parse_date(r.get("payment_date")),
-            "method": (r.get("method") or "").strip().lower() or None,
-            "status": (r.get("status") or "").strip().lower(),
+            "method": raw_method,
+            "status": canonical_status,
         })
     return out, skipped
 
@@ -213,15 +310,15 @@ async def create_run(
     if not payments_rows:
         raise HTTPException(status_code=400, detail="payments.csv is empty or unreadable")
 
-    # Header validation
+    # Header validation (alias-aware)
     orders_headers = set(orders_rows[0].keys())
     payments_headers = set(payments_rows[0].keys())
-    missing_o = ORDERS_HEADERS - orders_headers
+    missing_o = _missing_canonical_headers(orders_headers, ORDERS_ALIASES, ORDERS_HEADERS)
     if missing_o:
-        raise HTTPException(status_code=400, detail=f"orders.csv missing headers: {sorted(missing_o)}")
-    missing_p = PAYMENTS_HEADERS - payments_headers
+        raise HTTPException(status_code=400, detail=f"orders.csv missing headers: {missing_o}")
+    missing_p = _missing_canonical_headers(payments_headers, PAYMENTS_ALIASES, PAYMENTS_HEADERS)
     if missing_p:
-        raise HTTPException(status_code=400, detail=f"payments.csv missing headers: {sorted(missing_p)}")
+        raise HTTPException(status_code=400, detail=f"payments.csv missing headers: {missing_p}")
 
     orders_norm, orders_skipped = _normalize_orders(orders_rows)
     payments_norm, payments_skipped = _normalize_payments(payments_rows)
