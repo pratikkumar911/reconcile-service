@@ -7,7 +7,7 @@ https://excalidraw.com/#json=TzrXtikEyPNUa1vibRhS-,4055v5VEPwNvj-H0kLlw8Q
 A full-stack app for store owners to upload their `orders.csv` and `payments.csv`, and get a deterministic reconciliation report with LLM-powered plain-English explanations.
 
 ## Tech stack (as-built)
-- **Frontend**: React 19 (CRA + craco), TailwindCSS, shadcn/ui, Recharts, sonner (toasts), Lucide icons
+- **Frontend**: React, TailwindCSS, shadcn/ui, Recharts, sonner (toasts), Lucide icons
 - **Backend**: Node.js + Express + MongoDB
 - **Database**: MongoDB
 - **Auth**: JWT (Bearer token, HS256, 7-day expiry) + bcrypt (cost 10)
@@ -32,16 +32,6 @@ npm install
 #   REACT_APP_BACKEND_URL=http://localhost:8000   (leave unset to call same-origin /api)
 npm start
 ```
-
-> No `.env.example` files currently exist in the repo — the vars above are read directly from `backend/.env` / `frontend/.env` via `dotenv`, with sane local defaults if omitted.
->
-> CORS is currently wide open (`app.use(cors())`, no origin allowlist) — fine for local dev, but should be locked down before any real deployment.
-
-## Test credentials
-No seeded accounts — sign up fresh via `/auth` (Sign up tab) with any email + a 6+ character password.
-
-## Sample data
-`sample_data/orders.csv` and `sample_data/payments.csv` — designed to trigger **every** discrepancy type.
 
 ## Reconciliation rules
 
@@ -79,8 +69,6 @@ All under `/api/*`. All except `/api/auth/signup` and `/api/auth/login` require 
 | POST | `/discrepancies/{id}/explain` | Get/cache LLM explanation |
 | POST | `/discrepancies/{id}/regenerate` | Bypass cache and re-explain |
 
-> **Known gap**: `frontend/src/pages/RunsPage.js` (a run-history list view) calls `GET /api/runs` to list all of a user's runs, and links each row to `/runs/{id}`. That list endpoint **does not exist yet** on the backend, and `RunsPage` isn't currently mounted in `App.js`'s routes either. Both need to be added before the history view can work — see Future improvements.
-
 ## Frontend routes
 
 | Path | Page | Notes |
@@ -97,42 +85,3 @@ All under `/api/*`. All except `/api/auth/signup` and `/api/auth/login` require 
 - Response is parsed leniently (extracts first `{...}` JSON object from the text), validated for shape
 - Whole call wrapped in try/catch → any error (network, non-2xx, malformed JSON) falls back to a canned "couldn't be generated" message. **Note**: a `TIMEOUT_S = 15` constant is declared in `llm.js` but not currently enforced (no request timeout or retry is actually wired up) — see Future improvements
 - Cached in `discrepancies.llm_explanation` — re-open the side panel = free / instant
-
-## Robustness
-- CSV upload: `.csv` extension check, max **5MB**, header validation (returns 400 with the missing headers)
-- Skipped rows are counted and their first 50 reasons are returned in the run summary
-- LLM calls wrapped in try/catch with a graceful fallback (see above)
-- No secrets logged; `.env` is git-ignored
-
-## Findings from the sample data
-Uploading `sample_data/orders.csv` + `sample_data/payments.csv` produces:
-- 10 orders, 9 payments
-- 9 discrepancies + 1 matched (O-1001) + 1 matched refund (O-1005)
-- **Total money at risk: $865.10 USD**
-- One CURRENCY_MISMATCH (O-1003 booked in EUR, paid in USD → 120 EUR ≈ $129.60 USD at risk)
-- One CANCELLED_BUT_PAID (O-1004 cancelled but $75 paid — refund needed)
-- One STATUS_CONFLICT (O-1007 order completed but payment `failed`)
-- Duplicate payments for O-1006 (P-9006 + P-9006B) — one duplicate refund needed
-- Duplicate order rows for O-1008 — dedupe your export
-- MISSING_PAYMENT for O-1009 ($300 lost or unrecorded)
-- ORPHAN_PAYMENT P-9999 for unknown order O-9999
-- AMOUNT_MISMATCH for O-1002 (paid $49.50 vs expected $50.00)
-
-## Future improvements
-- Add the missing `GET /runs` list endpoint and mount `RunsPage` at `/runs` so run history actually works
-- Multi-tenant workspaces (share runs w/ teammates, roles)
-- Server-side pagination + virtualization on discrepancies table
-- Async ingestion with progress via SSE for very large CSVs
-- Configurable FX (multiple currencies, live rates)
-- Auto-suggest field mapping when CSV headers don't match exactly (fuzzy match)
-- Actually enforce the `TIMEOUT_S` request timeout in `llm.js`, and add one automatic retry on timeout/malformed JSON
-- Restrict CORS to an explicit origin allowlist instead of `cors()` wide open
-- Rate-limiting on `/auth/*`
-- Add a `/api/health` liveness endpoint
-- Add `.env.example` files for both `backend/` and `frontend/`
-- CSV export of filtered discrepancies
-- Compare two runs side-by-side (delta view)
-- Batch "Explain all top 5" action
-
-## Note on AI-tool usage
-This repository was scaffolded and implemented with a local full-stack setup. All reconciliation rules, tolerance math, and endpoint contracts are enforced deterministically in code (`backend/reconcile.js`).
