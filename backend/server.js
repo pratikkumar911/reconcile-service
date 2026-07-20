@@ -219,7 +219,10 @@ function round2(value) {
   return Math.round((value + Number.EPSILON) * 100) / 100;
 }
 
-app.use(cors());
+app.use(cors({
+  origin: "https://reconcile-service-frontend.onrender.com",
+  credentials: true
+}));
 app.use(express.json());
 app.use('/api', express.json());
 
