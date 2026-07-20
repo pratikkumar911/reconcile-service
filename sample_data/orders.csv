@@ -1,0 +1,11 @@
+order_id,customer_email,order_date,gross_amount,discount,net_amount,currency,status
+O-1001,alice@shop.io,2026-01-05,100.00,10.00,90.00,USD,completed
+O-1002,bob@shop.io,2026-01-06,50.00,0.00,50.00,USD,completed
+O-1003,carol@shop.io,2026-01-07,120.00,0.00,120.00,EUR,completed
+O-1004,,2026-01-08,80.00,5.00,75.00,USD,cancelled
+O-1005,dave@shop.io,2026-01-09,40.00,0.00,40.00,USD,refunded
+O-1006,eve@shop.io,2026-01-10,200.00,20.00,180.00,USD,completed
+O-1007,frank@shop.io,2026-01-11,60.00,0.00,60.00,USD,completed
+O-1008,gina@shop.io,2026-01-12,25.00,0.00,25.00,USD,completed
+O-1008,gina@shop.io,2026-01-12,25.00,0.00,25.00,USD,completed
+O-1009,hank@shop.io,2026-01-13,300.00,0.00,300.00,USD,completed
