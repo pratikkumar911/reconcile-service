@@ -31,21 +31,6 @@ export default function AppShell({ children }) {
             </span>
           </Link>
 
-          <nav className="flex items-center gap-1">
-            <Link
-              to="/"
-              data-testid="nav-dashboard"
-              className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-                active("/")
-                  ? "bg-slate-900 text-white"
-                  : "text-slate-700 hover:bg-slate-100"
-              }`}
-            >
-              <LayoutDashboard className="h-4 w-4" />
-              Dashboard
-            </Link>
-          </nav>
-
           <div className="ml-auto flex items-center gap-3">
             <span
               data-testid="current-user-email"

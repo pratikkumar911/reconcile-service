@@ -132,7 +132,7 @@ export default function DashboardPage() {
         <>
           <KpiCards kpis={kpis} />
           <div className="grid gap-4 lg:grid-cols-3">
-            <div className="lg:col-span-2">
+            <div className="lg:col-span-2 min-w-0">
               <DiscrepancyChart kpis={kpis} />
             </div>
             <div className="rounded-lg border border-slate-200 bg-white p-5">
