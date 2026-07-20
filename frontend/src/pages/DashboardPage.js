@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { api } from "../lib/api";
 import UploadPanel from "../components/UploadPanel";
 import KpiCards from "../components/KpiCards";
@@ -11,6 +11,7 @@ import { toast } from "sonner";
 
 export default function DashboardPage() {
   const { runId: routeRunId } = useParams();
+  const nav = useNavigate();
   const [currentRun, setCurrentRun] = useState(null);
   const [kpis, setKpis] = useState(null);
   const [rows, setRows] = useState([]);
@@ -61,6 +62,7 @@ export default function DashboardPage() {
 
   const onCreated = async (run) => {
     await loadRun(run.id);
+    nav(`/runs/${run.id}`);
   };
 
   const onExplain = (d) => {

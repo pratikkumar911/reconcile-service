@@ -43,6 +43,16 @@ export default function App() {
               </Protected>
             }
           />
+          <Route
+            path="/runs/:runId"
+            element={
+              <Protected>
+                <AppShell>
+                  <DashboardPage />
+                </AppShell>
+              </Protected>
+            }
+          />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>

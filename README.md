@@ -2,42 +2,42 @@
 
 A full-stack app for store owners to upload their `orders.csv` and `payments.csv`, and get a deterministic reconciliation report with LLM-powered plain-English explanations.
 
-## Live URLs
-- Frontend: https://payment-match-hub-7.preview.example.com
-- Backend API: same origin, `/api/*`
-
 ## Tech stack (as-built)
 - **Frontend**: React 19 (CRA + craco), TailwindCSS, shadcn/ui, Recharts, sonner (toasts), Lucide icons
 - **Backend**: Node.js + Express + MongoDB
 - **Database**: MongoDB
-- **Auth**: JWT (Bearer token, HS256) + bcrypt (cost 10)
-- **LLM**: OpenAI `gpt-4.1-mini` via configured LLM API key (temperature 0.2, JSON-shape enforced, 15s timeout, one automatic retry, cache in Mongo)
+- **Auth**: JWT (Bearer token, HS256, 7-day expiry) + bcrypt (cost 10)
+- **LLM**: OpenAI `gpt-4.1-mini` via configured LLM API key (temperature 0.2, JSON-shape enforced, cached in Mongo — see LLM approach below for the timeout caveat)
 - **FX**: EUR→USD fixed at 1.08
-
-> **Note**: The project now uses Node/Express with MongoDB, and the reconciliation rules, endpoints, and semantics were preserved in the implementation.
 
 ## Local setup
 ```bash
-# Backend
-cd /app/backend
+# Backend (from the repo root)
+cd backend
 npm install
-# .env should contain: MONGO_URL, DB_NAME, JWT_SECRET, CORS_ORIGINS
-# Start the API with: npm start
+# create backend/.env with:
+#   PORT=8000                                (optional, defaults to 8000)
+#   MONGO_URL=mongodb://127.0.0.1:27017       (include the db name in the URL, e.g. .../reconcile)
+#   JWT_SECRET=some-long-random-string
+npm start
 
-# Frontend
-cd /app/frontend
-yarn install
-# .env should contain: REACT_APP_BACKEND_URL
-sudo supervisorctl restart frontend
+# Frontend (from the repo root, in a second terminal)
+cd frontend
+npm install
+# create frontend/.env with:
+#   REACT_APP_BACKEND_URL=http://localhost:8000   (leave unset to call same-origin /api)
+npm start
 ```
 
+> No `.env.example` files currently exist in the repo — the vars above are read directly from `backend/.env` / `frontend/.env` via `dotenv`, with sane local defaults if omitted.
+>
+> CORS is currently wide open (`app.use(cors())`, no origin allowlist) — fine for local dev, but should be locked down before any real deployment.
+
 ## Test credentials
-Signup fresh via `/auth` (Sign up tab). Sample credentials created during smoke testing:
-- Email: `e2e@test.com`
-- Password: `testpass123`
+No seeded accounts — sign up fresh via `/auth` (Sign up tab) with any email + a 6+ character password.
 
 ## Sample data
-`/app/sample_data/orders.csv` and `/app/sample_data/payments.csv` — designed to trigger **every** discrepancy type.
+`sample_data/orders.csv` and `sample_data/payments.csv` — designed to trigger **every** discrepancy type.
 
 ## Reconciliation rules
 
@@ -61,7 +61,7 @@ Reconciliation is **idempotent** — running the same inputs produces the same c
 
 ## API endpoints
 
-All under `/api/*`. All except `/api/auth/*` and `/api/health` require `Authorization: Bearer <token>`.
+All under `/api/*`. All except `/api/auth/signup` and `/api/auth/login` require `Authorization: Bearer <token>`.
 
 | Method | Path | Description |
 |---|---|---|
@@ -69,30 +69,39 @@ All under `/api/*`. All except `/api/auth/*` and `/api/health` require `Authoriz
 | POST | `/auth/login` | Login → `{ token, user }` |
 | GET | `/auth/me` | Current user |
 | POST | `/runs` | Multipart upload of `orders_file` + `payments_file` — parses, validates, reconciles, and returns `RunSummary` |
-| GET | `/runs` | List user's runs (desc by date) |
 | GET | `/runs/{run_id}` | One run summary |
 | GET | `/runs/{run_id}/kpis` | KPI aggregates + by-type counts + by-type money |
 | GET | `/runs/{run_id}/discrepancies` | Filtered list. Query params: `types` (csv), `currency`, `min_amount`, `max_amount`, `q`, `include_matched` |
 | POST | `/discrepancies/{id}/explain` | Get/cache LLM explanation |
 | POST | `/discrepancies/{id}/regenerate` | Bypass cache and re-explain |
-| GET | `/health` | Liveness |
+
+> **Known gap**: `frontend/src/pages/RunsPage.js` (a run-history list view) calls `GET /api/runs` to list all of a user's runs, and links each row to `/runs/{id}`. That list endpoint **does not exist yet** on the backend, and `RunsPage` isn't currently mounted in `App.js`'s routes either. Both need to be added before the history view can work — see Future improvements.
+
+## Frontend routes
+
+| Path | Page | Notes |
+|---|---|---|
+| `/auth` | `AuthPage` | Public only — redirects to `/` if already logged in |
+| `/` | `DashboardPage` | Protected. Shows the most recently loaded run, or an empty state if none is loaded yet |
+| `/runs/:runId` | `DashboardPage` | Protected. Loads a specific run by ID — this is what makes a reconciliation survive a page refresh, since the run ID lives in the URL instead of only in memory |
+| `*` | — | Redirects to `/` |
 
 ## LLM approach
-- Model: `gpt-4.1-mini` (via configured LLM API key)
+- Model: `gpt-4.1-mini` (via configured `LLM_API_KEY` env var; falls back to a canned message if unset)
 - Temperature: 0.2 (low for consistent explanations)
 - Prompt requests strict JSON: `{ summary, likely_cause, suggested_action }`
-- Response is parsed leniently (strips code fences, extracts first JSON object), validated for shape
-- Timeout 15s. On timeout or malformed JSON: one retry; then graceful fallback message
+- Response is parsed leniently (extracts first `{...}` JSON object from the text), validated for shape
+- Whole call wrapped in try/catch → any error (network, non-2xx, malformed JSON) falls back to a canned "couldn't be generated" message. **Note**: a `TIMEOUT_S = 15` constant is declared in `llm.js` but not currently enforced (no request timeout or retry is actually wired up) — see Future improvements
 - Cached in `discrepancies.llm_explanation` — re-open the side panel = free / instant
 
 ## Robustness
 - CSV upload: `.csv` extension check, max **5MB**, header validation (returns 400 with the missing headers)
 - Skipped rows are counted and their first 50 reasons are returned in the run summary
-- LLM calls wrapped in `asyncio.wait_for` + try/except
-- No secrets logged; `.env` git-ignored; use `.env.example` (see below)
+- LLM calls wrapped in try/catch with a graceful fallback (see above)
+- No secrets logged; `.env` is git-ignored
 
 ## Findings from the sample data
-Uploading `/app/sample_data/orders.csv` + `/app/sample_data/payments.csv` produces:
+Uploading `sample_data/orders.csv` + `sample_data/payments.csv` produces:
 - 10 orders, 9 payments
 - 9 discrepancies + 1 matched (O-1001) + 1 matched refund (O-1005)
 - **Total money at risk: $865.10 USD**
@@ -106,18 +115,20 @@ Uploading `/app/sample_data/orders.csv` + `/app/sample_data/payments.csv` produc
 - AMOUNT_MISMATCH for O-1002 (paid $49.50 vs expected $50.00)
 
 ## Future improvements
+- Add the missing `GET /runs` list endpoint and mount `RunsPage` at `/runs` so run history actually works
 - Multi-tenant workspaces (share runs w/ teammates, roles)
 - Server-side pagination + virtualization on discrepancies table
 - Async ingestion with progress via SSE for very large CSVs
 - Configurable FX (multiple currencies, live rates)
 - Auto-suggest field mapping when CSV headers don't match exactly (fuzzy match)
-- Rate-limiting on `/auth/*` with slowapi
+- Actually enforce the `TIMEOUT_S` request timeout in `llm.js`, and add one automatic retry on timeout/malformed JSON
+- Restrict CORS to an explicit origin allowlist instead of `cors()` wide open
+- Rate-limiting on `/auth/*`
+- Add a `/api/health` liveness endpoint
+- Add `.env.example` files for both `backend/` and `frontend/`
 - CSV export of filtered discrepancies
 - Compare two runs side-by-side (delta view)
 - Batch "Explain all top 5" action
 
 ## Note on AI-tool usage
-This repository was scaffolded and implemented with a local full-stack setup. All reconciliation rules, tolerance math, and endpoint contracts are enforced deterministically in code (`/app/backend/reconcile.js`).
-
-## `.env.example`
-See `/app/backend/.env.example` if present.
+This repository was scaffolded and implemented with a local full-stack setup. All reconciliation rules, tolerance math, and endpoint contracts are enforced deterministically in code (`backend/reconcile.js`).

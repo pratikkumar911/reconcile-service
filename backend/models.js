@@ -6,10 +6,6 @@ function createAuthResponse(token, user) {
   return { token, user };
 }
 
-function createRunSummary(runDoc) {
-  return runDoc;
-}
-
 function createDiscrepancyOut(discrepancy) {
   return discrepancy;
 }
@@ -21,7 +17,6 @@ function createKpiSummary(summary) {
 module.exports = {
   createUserPublic,
   createAuthResponse,
-  createRunSummary,
   createDiscrepancyOut,
   createKpiSummary,
 };
