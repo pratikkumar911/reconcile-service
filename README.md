@@ -1,5 +1,9 @@
 # Order-Payment Reconciliation Dashboard
 
+## Excalidraw link
+
+https://excalidraw.com/#json=TzrXtikEyPNUa1vibRhS-,4055v5VEPwNvj-H0kLlw8Q
+
 A full-stack app for store owners to upload their `orders.csv` and `payments.csv`, and get a deterministic reconciliation report with LLM-powered plain-English explanations.
 
 ## Tech stack (as-built)
