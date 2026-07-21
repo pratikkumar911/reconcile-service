@@ -4,8 +4,8 @@ const path = require('path');
 dotenv.config({ path: path.join(__dirname, '.env') });
 
 const LLM_API_KEY = process.env.LLM_API_KEY || '';
-const MODEL_PROVIDER = 'openai';
-const MODEL_NAME = 'gpt-4.1-mini';
+const MODEL_PROVIDER = 'gemini';
+const MODEL_NAME = 'gemini-2.5-flash';
 const TIMEOUT_S = 15;
 
 const SYSTEM_PROMPT = [
@@ -50,19 +50,27 @@ async function explainDiscrepancy(discrepancy) {
   }
 
   try {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${LLM_API_KEY}`;
+
+    const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${LLM_API_KEY}`,
       },
       body: JSON.stringify({
-        model: MODEL_NAME,
-        temperature: 0.2,
-        messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
-          { role: 'user', content: buildUserPrompt(discrepancy) },
+        systemInstruction: {
+          parts: [{ text: SYSTEM_PROMPT }],
+        },
+        contents: [
+          {
+            role: 'user',
+            parts: [{ text: buildUserPrompt(discrepancy) }],
+          },
         ],
+        generationConfig: {
+          temperature: 0.2,
+          responseMimeType: 'application/json',
+        },
       }),
     });
 
@@ -71,7 +79,7 @@ async function explainDiscrepancy(discrepancy) {
     }
 
     const data = await response.json();
-    const text = data?.choices?.[0]?.message?.content || '';
+    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
     const stripped = String(text).trim();
     const match = stripped.match(/\{[\s\S]*\}/);
     if (!match) {
