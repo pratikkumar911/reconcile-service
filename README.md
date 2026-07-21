@@ -11,7 +11,7 @@ A full-stack app for store owners to upload their `orders.csv` and `payments.csv
 - **Backend**: Node.js + Express + MongoDB
 - **Database**: MongoDB
 - **Auth**: JWT (Bearer token, HS256, 7-day expiry) + bcrypt (cost 10)
-- **LLM**: OpenAI `gpt-4.1-mini` via configured LLM API key (temperature 0.2, JSON-shape enforced, cached in Mongo — see LLM approach below for the timeout caveat)
+- **LLM**: Google `gemini` via configured LLM API key (temperature 0.2, JSON-shape enforced, cached in Mongo — see LLM approach below for the timeout caveat)
 - **FX**: EUR→USD fixed at 1.08
 
 ## Local setup
@@ -79,7 +79,7 @@ All under `/api/*`. All except `/api/auth/signup` and `/api/auth/login` require 
 | `*` | — | Redirects to `/` |
 
 ## LLM approach
-- Model: `gpt-4.1-mini` (via configured `LLM_API_KEY` env var; falls back to a canned message if unset)
+- Model: `gemini` (via configured `LLM_API_KEY` env var; falls back to a canned message if unset)
 - Temperature: 0.2 (low for consistent explanations)
 - Prompt requests strict JSON: `{ summary, likely_cause, suggested_action }`
 - Response is parsed leniently (extracts first `{...}` JSON object from the text), validated for shape
